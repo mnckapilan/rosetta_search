@@ -1,17 +1,30 @@
-from git import Repo
 import pickle
-from tqdm import tqdm
+import os
 import time
+from git import Repo
+from tqdm import tqdm
 from nltk import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+
+
+def preprocess_message(message):
+    stop_words = stopwords.words('english')
+    tokens = word_tokenize(message)
+    tokens = [word.lower() for word in tokens if word not in stop_words and word.isalpha()]
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+    return tokens, ' '.join(tokens)
 
 
 class Index:
     def __init__(self, repo_path):
-        self.repo_path = repo_path
-        self.repo_stub = repo_path.rsplit('/', 1)[-1]
+        self.repo_path = os.path.normpath(repo_path)
+        self.repo_stub = os.path.basename(self.repo_path)
         self.repo_obj = Repo(repo_path)
         self.index = {}
         self.stats = {}
+        self.message_index = {}
         if not self.repo_obj.bare:
             self.build_index()
 
@@ -27,26 +40,29 @@ class Index:
         num_commits = 0
         for commit in tqdm(self.repo_obj.iter_commits()):
             num_commits += 1
-            self.stats["last_indexed_commit"] = commit.hexsha
+            tokens, message = preprocess_message(commit.message)
+            self.message_index[commit.hexsha] = message
             for file in commit.stats.files.keys():
-                self.add(commit.message, file)
+                self.add(tokens, file)
         self.stats["initial_build_time"] = time.time() - start_time
-        print("Initial indexing complete. \n {} commits indexed in {} minutes".format(num_commits,
+        self.stats["last_indexed_commit"] = self.repo_obj.head.commit.hexsha
+        print("Initial indexing complete. \n {} commits indexed in {} seconds".format(num_commits,
                                                                                       self.stats["initial_build_time"]))
 
     def update_index(self):
+        self.stats["last_updated"] = time.time()
         rev_list_arg = '{}..HEAD'.format(self.stats["last_indexed_commit"])
         num_commits = 0
         for commit in tqdm(self.repo_obj.iter_commits(rev_list_arg)):
             num_commits += 1
-            self.stats["last_indexed_commit"] = commit.hexsha
+            tokens, message = preprocess_message(commit.message)
+            self.message_index[commit.hexsha] = message
             for file in commit.stats.files.keys():
-                self.add(commit.message, file)
+                self.add(tokens, file)
         print("{} new commits indexed in {} seconds".format(num_commits, time.time() - self.stats["last_updated"]))
-        self.stats["last_updated"] = time.time()
+        self.stats["last_indexed_commit"] = self.repo_obj.head.commit.hexsha
 
-    def add(self, message, file):
-        tokens = word_tokenize(message)
+    def add(self, tokens, file):
         for token in tokens:
             try:
                 self.index[token].add(file)

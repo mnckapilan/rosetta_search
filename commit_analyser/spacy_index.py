@@ -8,7 +8,7 @@ from tqdm import tqdm
 nlp = spacy.load('en_core_web_sm')
 
 
-class Index:
+class SpacyIndex:
     def __init__(self, repo_path):
         self.repo_path = repo_path
         self.repo_stub = repo_path.rsplit('/', 1)[-1]
