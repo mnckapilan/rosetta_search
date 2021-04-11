@@ -17,11 +17,12 @@ def preprocess_message(message):
     return tokens, ' '.join(tokens)
 
 
-class Index:
+class DbIndex:
     def __init__(self, repo_path):
         self.repo_path = os.path.normpath(repo_path)
         self.repo_stub = os.path.basename(self.repo_path)
         self.repo_obj = Repo(repo_path)
+        self.db_location = self.repo_path + '/semantic_search.db'
         self.index = {}
         self.stats = {}
         self.file_to_messages = {}
@@ -76,13 +77,13 @@ class Index:
                 self.index[token] = {file}
 
 
-    def search(self, query):
-        try:
-            tokens, message = preprocess_message(query)
-        except KeyError:
-            return "No results found"
+def search(self, query):
+    try:
+        tokens, message = preprocess_message(query)
+    except KeyError:
+        return "No results found"
 
 
-    def save_index(self, filepath):
-        with open(filepath, "wb") as file:
-            pickle.dump(self, file)
+def save_index(self, filepath):
+    with open(filepath, "wb") as file:
+        pickle.dump(self, file)
