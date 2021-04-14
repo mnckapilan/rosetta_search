@@ -3,8 +3,8 @@ from datetime import datetime
 from git import Repo
 from tqdm import tqdm
 
-from sqlite_sem_search.database import Database
-from sqlite_sem_search.nlp import preprocess_message
+from database import Database
+from nlp_utils import preprocess_message
 
 
 class Index:
@@ -56,7 +56,3 @@ class Index:
             self.database.meta_update(start_time, end_time, start_rev, end_rev, num_commits)
         else:
             print("No new updates")
-
-
-if __name__ == '__main__':
-    Index("/Users/kapilan/githome/for_analysis/now/crdt-canvas/")
