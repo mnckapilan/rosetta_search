@@ -7,7 +7,7 @@ from database import Database
 from nlp_utils import preprocess_message
 
 
-class Index:
+class RosettaIndex:
     def __init__(self, repo_path):
         self.repo_path = os.path.normpath(repo_path)
         self.repo_stub = os.path.basename(self.repo_path)
