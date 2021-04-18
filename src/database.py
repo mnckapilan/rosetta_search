@@ -8,7 +8,7 @@ def uuid():
 
 class Database:
     def __init__(self, repo_path):
-        self.db_location = repo_path + '/semantic_search.db'
+        self.db_location = repo_path + '/src.db'
 
     def db_is_empty(self):
         con = sqlite3.connect(self.db_location)
