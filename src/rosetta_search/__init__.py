@@ -1,1 +1,1 @@
-from rosetta_index import RosettaIndex
+from .rosetta_index import RosettaIndex

@@ -3,8 +3,8 @@ from datetime import datetime
 from git import Repo
 from tqdm import tqdm
 
-from database import Database
-from nlp_utils import preprocess_message
+from .database import Database
+from .nlp_utils import preprocess_message
 
 
 class RosettaIndex:
