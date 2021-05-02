@@ -22,6 +22,10 @@ setup(
     install_requires=[
         "GitPython~=3.1.14",
         "nltk~=3.6.1",
-        "tqdm~=4.60.0"
-    ]
+        "click~=7.1.2"
+    ],
+    entry_points='''
+    [console_scripts]
+    hellothere=rosetta_search:rosetta
+    '''
 )
