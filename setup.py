@@ -26,6 +26,6 @@ setup(
     ],
     entry_points='''
     [console_scripts]
-    hellothere=rosetta_search:rosetta
+    rosetta=rosetta_search:rosetta
     '''
 )

@@ -50,3 +50,7 @@ def update(ctx):
 def search(ctx, query):
     index = RosettaIndex(ctx.repo_path, ctx.index_path)
     click.echo(index.search_index(query))
+
+
+if __name__ == '__main__':
+    rosetta()
