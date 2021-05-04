@@ -1,9 +1,14 @@
+import json
 import os
 import fnmatch
 import sqlite3
 from urllib.request import pathname2url
 import click
 from git import Repo
+
+
+def json_echo(dictionary):
+    click.echo(json.dumps(dictionary, indent=2))
 
 
 def normalise_paths(*paths):
@@ -19,7 +24,6 @@ def normalise_paths(*paths):
 def check_index_path(repo_path, index_path=None):
     if not index_path:
         index_path = look_for_existing_index(repo_path)
-        click.echo(f"No index_path provided. Found {index_path} as existing index.")
     if not index_path:
         raise click.UsageError("No existing index found. Use create to create an index.")
     try:

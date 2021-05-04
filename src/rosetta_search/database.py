@@ -177,4 +177,21 @@ class Database:
         return last_updated
 
     def search(self, query):
-        return "dummy search result"
+        con = sqlite3.connect(self.db_location)
+        cur = con.cursor()
+
+        results = cur.execute(
+            "SELECT tokens.token_string, f.filepath "
+            "FROM tokens "
+            "JOIN tokens_files tf "
+            "ON tokens.token_id = tf.token_id "
+            "JOIN files f "
+            "ON tf.file_id = f.file_id "
+            "WHERE token_string like :query",
+            {"query": query}).fetchall()
+
+        con.commit()
+        con.close()
+
+        keys = ["keywords", "filepath"]
+        return [dict(zip(keys, result)) for result in results]
