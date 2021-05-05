@@ -7,8 +7,9 @@ def uuid():
 
 
 class Database:
-    def __init__(self, repo_path):
-        self.db_location = repo_path + '/src.db'
+    def __init__(self, db_path):
+        self.db_location = db_path
+        self.create_if_not_exists_tables()
 
     def db_is_empty(self):
         con = sqlite3.connect(self.db_location)
@@ -109,7 +110,7 @@ class Database:
         con.commit()
         con.close()
 
-    def create_db_tables(self):
+    def create_if_not_exists_tables(self):
         con = sqlite3.connect(self.db_location)
         cur = con.cursor()
 
@@ -164,6 +165,34 @@ class Database:
 
         return last_rev
 
-    def update_tfidf(self):
+    def get_last_updated(self):
         con = sqlite3.connect(self.db_location)
         cur = con.cursor()
+
+        last_updated = cur.execute("SELECT end_time FROM updates ORDER BY end_time LIMIT 1").fetchone()[0]
+
+        con.commit()
+        con.close()
+
+        return last_updated
+
+    def search(self, query):
+        con = sqlite3.connect(self.db_location)
+        cur = con.cursor()
+
+        results = cur.execute(
+            "SELECT tokens.token_string, f.filepath "
+            "FROM tokens "
+            "JOIN tokens_files tf "
+            "ON tokens.token_id = tf.token_id "
+            "JOIN files f "
+            "ON tf.file_id = f.file_id "
+            "WHERE token_string like :query "
+            "GROUP BY f.filepath",
+            {"query": query}).fetchall()
+
+        con.commit()
+        con.close()
+
+        keys = ["keywords", "filepath"]
+        return [dict(zip(keys, result)) for result in results]

@@ -7,7 +7,7 @@ setup(
     url="https://github.com/mnckapilan/rosetta_search",
     author="Kapilan M",
     author_email="mnckapilan+git@gmail.com",
-    version='0.0.5',
+    version='0.0.6',
     description="Semantic Code Search informed by git commit messages",
     packages=find_packages(where='src'),
     classifiers=[
@@ -22,6 +22,10 @@ setup(
     install_requires=[
         "GitPython~=3.1.14",
         "nltk~=3.6.1",
-        "tqdm~=4.60.0"
-    ]
+        "click~=7.1.2"
+    ],
+    entry_points='''
+    [console_scripts]
+    rosetta=rosetta_search:rosetta
+    '''
 )

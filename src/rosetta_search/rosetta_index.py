@@ -1,33 +1,20 @@
-import os
 from datetime import datetime
 from git import Repo
-from tqdm import tqdm
-
 from .database import Database
 from .nlp_utils import preprocess_message
 
 
 class RosettaIndex:
-    def __init__(self, repo_path):
-        self.repo_path = os.path.normpath(repo_path)
-        self.repo_stub = os.path.basename(self.repo_path)
+    def __init__(self, repo_path, db_path=None):
         self.repo_obj = Repo(repo_path)
-        if self.repo_obj.bare:
-            raise Exception("Folder is not git repository")
-
-        self.database = Database(repo_path)
-        self.database.create_db_tables()
+        self.database = Database(db_path)
         if self.database.index_is_empty():
-            self.build_index()
-        else:
-            self.update_index()
-        self.database.update_tfidf()
+            raise Exception("Index is empty")
 
     def build_index(self):
-        print("Started indexing for " + self.repo_stub)
         start_time = datetime.now()
         num_commits = 0
-        for commit in tqdm(self.repo_obj.iter_commits()):
+        for commit in self.repo_obj.iter_commits():
             start_rev = commit.hexsha
             num_commits += 1
             tokens, message = preprocess_message(commit.message)
@@ -44,7 +31,7 @@ class RosettaIndex:
         start_time = datetime.now()
         num_commits = 0
         start_rev = None
-        for commit in tqdm(self.repo_obj.iter_commits(rev_list_arg)):
+        for commit in self.repo_obj.iter_commits(rev_list_arg):
             start_rev = commit.hexsha
             num_commits += 1
             tokens, message = preprocess_message(commit.message)
@@ -54,5 +41,10 @@ class RosettaIndex:
         end_time = datetime.now()
         if start_rev is not None:
             self.database.meta_update(start_time, end_time, start_rev, end_rev, num_commits)
-        else:
-            print("No new updates")
+        return num_commits, end_time
+
+    def search_index(self, query):
+        return self.database.search(query)
+
+    def get_last_updated(self):
+        return self.database.get_last_updated()
