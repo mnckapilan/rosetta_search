@@ -58,6 +58,8 @@ def search(ctx, query):
     results = index.search_index(query)
     if ctx.json_mode:
         json_echo({"status": "success", "results": results})
+    else:
+        click.echo(results)
 
 
 if __name__ == '__main__':

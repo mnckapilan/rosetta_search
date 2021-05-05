@@ -187,7 +187,8 @@ class Database:
             "ON tokens.token_id = tf.token_id "
             "JOIN files f "
             "ON tf.file_id = f.file_id "
-            "WHERE token_string like :query",
+            "WHERE token_string like :query "
+            "GROUP BY f.filepath",
             {"query": query}).fetchall()
 
         con.commit()
