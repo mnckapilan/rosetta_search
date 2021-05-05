@@ -7,7 +7,7 @@ setup(
     url="https://github.com/mnckapilan/rosetta_search",
     author="Kapilan M",
     author_email="mnckapilan+git@gmail.com",
-    version='0.0.5',
+    version='0.0.6',
     description="Semantic Code Search informed by git commit messages",
     packages=find_packages(where='src'),
     classifiers=[
