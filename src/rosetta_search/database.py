@@ -1,6 +1,8 @@
 import sqlite3
 from uuid import uuid4
 
+from git import Commit
+
 
 def uuid():
     return str(uuid4())
@@ -9,7 +11,8 @@ def uuid():
 class Database:
     def __init__(self, db_path):
         self.db_location = db_path
-        self.create_if_not_exists_tables()
+        if self.db_is_empty() or self.index_is_empty():
+            self.create_tables()
 
     def db_is_empty(self):
         con = sqlite3.connect(self.db_location)
@@ -39,7 +42,7 @@ class Database:
         else:
             return False
 
-    def insert_into_commits(self, commit, message):
+    def insert_into_commits(self, commit: Commit, message: str):
         con = sqlite3.connect(self.db_location)
         cur = con.cursor()
 
@@ -61,7 +64,7 @@ class Database:
         con.commit()
         con.close()
 
-    def insert_into_tokens_files(self, commit, tokens):
+    def insert_into_tokens_files(self, commit: Commit, tokens: list[str]):
         con = sqlite3.connect(self.db_location)
         cur = con.cursor()
 
@@ -92,6 +95,10 @@ class Database:
         cur.executemany("INSERT INTO tokens_files (token_file_id, token_id, file_id) VALUES (?,?,?)",
                         tokens_files_values)
 
+        commits_files_values = [(uuid(), commit.hexsha, file_id[0]) for file_id in file_ids]
+        cur.executemany("INSERT INTO commits_files (commit_file_id, commit_hash, file_id) VALUES (?,?,?)",
+                        commits_files_values)
+
         con.commit()
         con.close()
 
@@ -110,7 +117,7 @@ class Database:
         con.commit()
         con.close()
 
-    def create_if_not_exists_tables(self):
+    def create_tables(self):
         con = sqlite3.connect(self.db_location)
         cur = con.cursor()
 
@@ -140,6 +147,14 @@ class Database:
                     "tf_idf_score REAL,"
                     "FOREIGN KEY(token_id) REFERENCES tokens(token_id),"
                     "FOREIGN KEY (file_id) REFERENCES files(file_id)"
+                    ")")
+
+        cur.execute("CREATE TABLE IF NOT EXISTS commits_files ("
+                    "commit_file_id BLOB PRIMARY KEY,"
+                    "commit_hash BLOB,"
+                    "file_id BLOB,"
+                    "FOREIGN KEY(commit_hash) REFERENCES commits(hash),"
+                    "FOREIGN KEY (file_id) REFERENCES  files(file_id)"
                     ")")
 
         cur.execute("CREATE TABLE IF NOT EXISTS updates ("
@@ -176,11 +191,12 @@ class Database:
 
         return last_updated
 
-    def search(self, query):
+    def get_files_for_token(self, token: str):
         con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
         cur = con.cursor()
 
-        results = cur.execute(
+        rows = cur.execute(
             "SELECT tokens.token_string, f.filepath "
             "FROM tokens "
             "JOIN tokens_files tf "
@@ -189,10 +205,34 @@ class Database:
             "ON tf.file_id = f.file_id "
             "WHERE token_string like :query "
             "GROUP BY f.filepath",
-            {"query": query}).fetchall()
+            {"query": token}).fetchall()
+
+        files = []
+        for row in rows:
+            files.append(row['filepath'])
 
         con.commit()
         con.close()
 
-        keys = ["keywords", "filepath"]
-        return [dict(zip(keys, result)) for result in results]
+        return files
+
+    def get_all_commits(self):
+        con = sqlite3.connect(self.db_location)
+        cur = con.cursor()
+
+        commit_messages = cur.execute("SELECT message from commits")
+
+        con.commit()
+        con.close()
+
+        return commit_messages
+
+    def get_all_tokens(self):
+        con = sqlite3.connect(self.db_location)
+        cur = con.cursor()
+
+        ids, tokens = zip(*cur.execute("SELECT token_id, token_string FROM tokens"))
+
+        con.commit()
+        con.close()
+        return ids, tokens

@@ -25,11 +25,8 @@ def check_index_path(repo_path, index_path=None):
     if not index_path:
         index_path = look_for_existing_index(repo_path)
     if not index_path:
-        raise click.UsageError("No existing index found. Use create to create an index.")
-    try:
-        check_db_path(index_path)
-    except Exception:
-        raise click.UsageError("Index path provided is not a valid Rosetta Index.")
+        click.echo("No existing index found.")
+        return None
     return index_path
 
 
@@ -46,11 +43,3 @@ def look_for_existing_index(path):
         for filename in files:
             if fnmatch.fnmatch(filename, "*.db"):
                 return os.path.join(root, filename)
-
-
-def check_db_path(db_path):
-    try:
-        database_uri = f"file:{pathname2url(db_path)}?mode=rw"
-        conn = sqlite3.connect(database_uri, uri=True)
-    except sqlite3.OperationalError:
-        raise Exception(f"{db_path} is not a valid Rosetta index.")
