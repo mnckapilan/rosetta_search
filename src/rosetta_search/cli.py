@@ -1,7 +1,7 @@
 import click
 
-from .rosetta_index import RosettaIndex
-from .utils import check_repo_path, normalise_paths, check_index_path, json_echo
+from rosetta_search.rosetta_index import RosettaIndex
+from rosetta_search.utils import check_repo_path, normalise_paths, check_index_path, json_echo
 
 
 class Context:
@@ -10,22 +10,25 @@ class Context:
         self.index_path = None
         self.json_mode = False
 
+    def set_paths(self, repo_path, index_path=None):
+        repo_path, index_path = normalise_paths(repo_path, index_path)
+        check_repo_path(repo_path)
+        index_path = check_index_path(repo_path, index_path)
+        self.repo_path = repo_path
+        self.index_path = index_path
+
 
 pass_context = click.make_pass_decorator(Context, ensure=True)
 
 
 @click.group()
 @click.option('--json-mode', is_flag=True)
-@click.argument('repo-path', type=click.Path())
+@click.option('--repo-path', type=click.Path())
 @click.option('--index-path', type=click.Path())
 @pass_context
 def rosetta(ctx, json_mode, repo_path, index_path):
     ctx.json_mode = json_mode
-    repo_path, index_path = normalise_paths(repo_path, index_path)
-    check_repo_path(repo_path)
-    index_path = check_index_path(repo_path, index_path)
-    ctx.repo_path = repo_path
-    ctx.index_path = index_path
+    ctx.set_paths(repo_path, index_path)
 
 
 @rosetta.command()
@@ -51,15 +54,36 @@ def update(ctx):
 
 
 @rosetta.command()
-@click.option('--query', type=click.STRING)
+@click.option('--basic-search', type=click.STRING)
 @pass_context
-def search(ctx, query):
+def basic_search(ctx, query):
     index = RosettaIndex(ctx.repo_path, ctx.index_path)
-    results = index.search_index(query)
+    results = index.basic_search(query)
     if ctx.json_mode:
         json_echo({"status": "success", "results": results})
     else:
         click.echo(results)
+
+
+@rosetta.command()
+@click.option('--query', type=click.STRING)
+@pass_context
+def similarity_search(ctx, query):
+    index = RosettaIndex(ctx.repo_path, ctx.index_path)
+    results = index.similarity_search_index(query)
+    if ctx.json_mode:
+        json_echo({"status": "success", "results": results})
+    else:
+        click.echo(results)
+
+
+@rosetta.command()
+@click.option('--overwrite', is_flag=True)
+@pass_context
+def create(ctx, overwrite):
+    index, num_commits, build_time = RosettaIndex.create_new_index(ctx.repo_path, ctx.index_path)
+    if ctx.json_mode:
+        json_echo({"status": "success", "number_of_commits": num_commits, "build_time": build_time})
 
 
 if __name__ == '__main__':
