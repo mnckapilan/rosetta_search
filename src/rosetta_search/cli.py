@@ -67,10 +67,16 @@ def basic_search(ctx, query):
 
 @rosetta.command()
 @click.option('--query', type=click.STRING)
+@click.option('--top-n', type=click.INT)
 @pass_context
-def similarity_search(ctx, query):
+def similarity_search(ctx, query, top_n):
     index = RosettaIndex(ctx.repo_path, ctx.index_path)
-    results = index.similarity_search_index(query)
+
+    if top_n is None:
+        results = index.similarity_search_index(query)
+    else:
+        results = index.similarity_search_index(query, top_n)
+
     if ctx.json_mode:
         json_echo({"status": "success", "results": results})
     else:

@@ -1,3 +1,4 @@
+import math
 import sqlite3
 from uuid import uuid4
 
@@ -197,7 +198,7 @@ class Database:
         cur = con.cursor()
 
         rows = cur.execute(
-            "SELECT tokens.token_string, f.filepath "
+            "SELECT tokens.token_string, f.filepath, tf.tf_idf_score "
             "FROM tokens "
             "JOIN tokens_files tf "
             "ON tokens.token_id = tf.token_id "
@@ -207,12 +208,12 @@ class Database:
             "GROUP BY f.filepath",
             {"query": token}).fetchall()
 
-        files = []
-        for row in rows:
-            files.append(row['filepath'])
-
         con.commit()
         con.close()
+
+        files = []
+        for row in rows:
+            files.append((row['filepath'], row['tf_idf_score']))
 
         return files
 
@@ -236,3 +237,37 @@ class Database:
         con.commit()
         con.close()
         return ids, tokens
+
+    def update_all_tf_idf(self):
+        con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
+        con.create_function('log', 1, math.log2)
+
+        rows = cur.execute("SELECT token_file_id, token_id, file_id from tokens_files").fetchall()
+
+        tf_idf_query = '''
+        WITH tf(tf) as (SELECT COUNT(token_id) as tf
+                from tokens_files
+                WHERE token_id = :token_id
+                  and file_id = :file_id ),
+     df(df) as (
+         SELECT COUNT(*) as document_freq
+         from (SELECT 0 as df
+               from tokens_files
+               WHERE token_id = :token_id
+               GROUP BY file_id)),
+     n(n) as (SELECT COUNT(file_id) as number
+              from files)
+SELECT ((SELECT tf from tf) * (log((SELECT n from n) / ((SELECT df from df) + 1)))) as tfidf
+
+        '''
+
+        for row in rows:
+            returned_rows = cur.execute(tf_idf_query,
+                                        {"token_id": row["token_id"], "file_id": row["file_id"]}).fetchall()
+            tf_idf_score = [d['tfidf'] for d in returned_rows][0]
+            cur.execute("UPDATE tokens_files SET tf_idf_score = :tf_idf WHERE token_file_id = :token_file_id",
+                        {"tf_idf": tf_idf_score, "token_file_id": row["token_file_id"]})
+        con.commit()
+        con.close()

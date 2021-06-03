@@ -34,6 +34,7 @@ class RosettaIndex:
             tokens, message = preprocess_message(commit.message)
             self.database.insert_into_commits(commit, message)
             self.database.insert_into_tokens_files(commit, tokens)
+        self.update_tf_idf()
         end_rev = self.repo_obj.head.commit.hexsha
         end_time = datetime.now()
         self.database.meta_update(start_time, end_time, start_rev, end_rev, num_commits)
@@ -50,6 +51,7 @@ class RosettaIndex:
             tokens, message = preprocess_message(commit.message)
             self.database.insert_into_commits(commit, message)
             self.database.insert_into_tokens_files(commit, tokens)
+        self.update_tf_idf()
         end_rev = self.repo_obj.head.commit.hexsha
         end_time = datetime.now()
         if start_rev is not None:
@@ -62,21 +64,28 @@ class RosettaIndex:
     def get_last_updated(self):
         return self.database.get_last_updated()
 
-    def similarity_search_index(self, query):
+    def get_all_similarities(self, input_token):
         all_ids, all_tokens = self.database.get_all_tokens()
         tokens = []
         for uuid, token in zip(all_ids, all_tokens):
-            token = {"uuid": uuid, "token": token, "scores": get_similarities(token, query)}
+            token = {"uuid": uuid, "token": token, "scores": get_similarities(token, input_token)}
             tokens.append(token)
-        tokens = sorted(tokens, key=lambda x: x["scores"]["fasttext_similarity"], reverse=True)
+        return sorted(tokens, key=lambda x: x["scores"]["fasttext_similarity"], reverse=True)
+
+    def similarity_search_index(self, query: str, n=3):
         files = {}
-        n = 5
-        for tkn_obj in tokens[:n]:
-            token = tkn_obj["token"]
-            filepaths = self.database.get_files_for_token(token)
-            for filepath in filepaths:
-                try:
-                    files[filepath].append(token)
-                except KeyError:
-                    files[filepath] = [token]
+        for query_token in query.split():
+            similarities = self.get_all_similarities(query_token)
+            for tkn_obj in similarities[:n]:
+                token = tkn_obj["token"]
+                filepaths = self.database.get_files_for_token(token)
+                for filepath, tf_idf in filepaths:
+                    try:
+                        files[filepath].append(token)
+                    except KeyError:
+                        files[filepath] = [token]
+        sorted(files, key=len, reverse=True)
         return files
+
+    def update_tf_idf(self):
+        self.database.update_all_tf_idf()
