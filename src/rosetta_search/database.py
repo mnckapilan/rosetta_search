@@ -239,29 +239,30 @@ class Database:
         return ids, tokens
 
     def update_all_tf_idf(self):
-        con = sqlite3.connect(self.db_location)
-        con.row_factory = sqlite3.Row
-        cur = con.cursor()
-        con.create_function('log', 1, math.log2)
-
-        rows = cur.execute("SELECT token_file_id, token_id, file_id from tokens_files").fetchall()
 
         tf_idf_query = '''
-        WITH tf(tf) as (SELECT COUNT(token_id) as tf
-                from tokens_files
-                WHERE token_id = :token_id
-                  and file_id = :file_id ),
-     df(df) as (
-         SELECT COUNT(*) as document_freq
-         from (SELECT 0 as df
-               from tokens_files
-               WHERE token_id = :token_id
-               GROUP BY file_id)),
-     n(n) as (SELECT COUNT(file_id) as number
-              from files)
-SELECT ((SELECT tf from tf) * (log((SELECT n from n) / ((SELECT df from df) + 1)))) as tfidf
+                WITH tf(tf) as (SELECT COUNT(token_id) as tf
+                        from tokens_files
+                        WHERE token_id = :token_id
+                          and file_id = :file_id ),
+             df(df) as (
+                 SELECT COUNT(*) as document_freq
+                 from (SELECT 0 as df
+                       from tokens_files
+                       WHERE token_id = :token_id
+                       GROUP BY file_id)),
+             n(n) as (SELECT COUNT(file_id) as number
+                      from files)
+        SELECT ((SELECT tf from tf) * (log((SELECT n from n) / ((SELECT df from df) + 1)))) as tfidf
 
-        '''
+                '''
+
+        con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
+        con.create_function('log', 1, math.log2)
+        cur = con.cursor()
+
+        rows = cur.execute("SELECT token_file_id, token_id, file_id from tokens_files").fetchall()
 
         for row in rows:
             returned_rows = cur.execute(tf_idf_query,
@@ -269,5 +270,5 @@ SELECT ((SELECT tf from tf) * (log((SELECT n from n) / ((SELECT df from df) + 1)
             tf_idf_score = [d['tfidf'] for d in returned_rows][0]
             cur.execute("UPDATE tokens_files SET tf_idf_score = :tf_idf WHERE token_file_id = :token_file_id",
                         {"tf_idf": tf_idf_score, "token_file_id": row["token_file_id"]})
-        con.commit()
+            con.commit()
         con.close()
