@@ -192,13 +192,13 @@ class Database:
 
         return last_updated
 
-    def get_files_for_token(self, token: str):
+    def get_files_for_token(self, token: str) -> list[(str, float)]:
         con = sqlite3.connect(self.db_location)
         con.row_factory = sqlite3.Row
         cur = con.cursor()
 
         rows = cur.execute(
-            "SELECT tokens.token_string, f.filepath, tf.tf_idf_score "
+            "SELECT f.filepath, tf.tf_idf_score "
             "FROM tokens "
             "JOIN tokens_files tf "
             "ON tokens.token_id = tf.token_id "
@@ -211,10 +211,9 @@ class Database:
         con.commit()
         con.close()
 
-        files = []
+        files: list[(str, float)] = []
         for row in rows:
             files.append((row['filepath'], row['tf_idf_score']))
-
         return files
 
     def get_all_commits(self):
@@ -228,15 +227,20 @@ class Database:
 
         return commit_messages
 
-    def get_all_tokens(self):
+    def get_all_tokens(self) -> list[(str, str)]:
         con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
         cur = con.cursor()
 
-        ids, tokens = zip(*cur.execute("SELECT token_id, token_string FROM tokens"))
+        rows = cur.execute("SELECT token_id, token_string FROM tokens")
+        result = []
+        for row in rows:
+            result.append((row["token_id"], row["token_string"]))
 
         con.commit()
         con.close()
-        return ids, tokens
+
+        return result
 
     def update_all_tf_idf(self):
 

@@ -1,3 +1,4 @@
+import operator
 from datetime import datetime
 from pathlib import Path
 
@@ -5,8 +6,9 @@ import click
 from git import Repo
 
 from rosetta_search.database import Database
-from rosetta_search.nlp_server import get_similarities
+from rosetta_search.file_result import FileResult
 from rosetta_search.nlp_utils import preprocess_message
+from rosetta_search.similarity_result import SimilarityResult
 
 
 class RosettaIndex:
@@ -64,28 +66,27 @@ class RosettaIndex:
     def get_last_updated(self):
         return self.database.get_last_updated()
 
-    def get_all_similarities(self, input_token):
-        all_ids, all_tokens = self.database.get_all_tokens()
-        tokens = []
-        for uuid, token in zip(all_ids, all_tokens):
-            token = {"uuid": uuid, "token": token, "scores": get_similarities(token, input_token)}
-            tokens.append(token)
-        return sorted(tokens, key=lambda x: x["scores"]["fasttext_similarity"], reverse=True)
+    def get_similar_list(self, query_token) -> list[SimilarityResult]:
+        similar_set: list[SimilarityResult] = []
+        for matched_token_id, matched_token in self.database.get_all_tokens():
+            similar_set.append(SimilarityResult(query_token, matched_token, matched_token_id))
+        return sorted(similar_set, key=operator.attrgetter('similarity'), reverse=True)
 
     def similarity_search_index(self, query: str, n=3):
-        files = {}
+        file_set: dict[str, FileResult] = {}
+
         for query_token in query.split():
-            similarities = self.get_all_similarities(query_token)
-            for tkn_obj in similarities[:n]:
-                token = tkn_obj["token"]
-                filepaths = self.database.get_files_for_token(token)
-                for filepath, tf_idf in filepaths:
-                    try:
-                        files[filepath].append(token)
-                    except KeyError:
-                        files[filepath] = [token]
-        sorted(files, key=len, reverse=True)
-        return files
+            similar_list: list[SimilarityResult] = self.get_similar_list(query_token)
+            for similarity_result in similar_list[:n]:
+                matched_token = similarity_result.matched_token
+                files_and_scores: list[(str, float)] = self.database.get_files_for_token(matched_token)
+                for (filepath, tf_idf) in files_and_scores:
+                    if filepath not in file_set:
+                        file_set[filepath] = FileResult(filepath)
+                    file_set[filepath].add_matched_token(matched_token, tf_idf)
+                    file_set[filepath].add_query_token(query_token)
+
+        return sorted(file_set.items(), key=lambda item: item[1], reverse=True)[:10]
 
     def update_tf_idf(self):
         self.database.update_all_tf_idf()

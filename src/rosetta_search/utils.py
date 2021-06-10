@@ -1,14 +1,13 @@
+import fnmatch
 import json
 import os
-import fnmatch
-import sqlite3
-from urllib.request import pathname2url
+import jsonpickle
 import click
 from git import Repo
 
 
 def json_echo(dictionary):
-    click.echo(json.dumps(dictionary, indent=2))
+    click.echo(jsonpickle.encode(dictionary, unpicklable=False, indent=2))
 
 
 def normalise_paths(*paths):
