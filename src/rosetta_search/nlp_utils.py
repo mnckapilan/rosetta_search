@@ -9,3 +9,10 @@ def preprocess_message(message: str) -> tuple[list[str], str]:
     lemmatizer = WordNetLemmatizer()
     tokens = [lemmatizer.lemmatize(word) for word in tokens]
     return tokens, ' '.join(tokens)
+
+
+def tokenize_and_clean(message: str) -> list[str]:
+    stop_words = stopwords.words('english')
+    tokens = word_tokenize(message)
+    tokens = [word.lower() for word in tokens if word not in stop_words and word.isalpha()]
+    return tokens

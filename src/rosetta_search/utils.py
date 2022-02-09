@@ -1,8 +1,8 @@
 import fnmatch
-import json
 import os
-import jsonpickle
+
 import click
+import jsonpickle
 from git import Repo
 
 
@@ -24,7 +24,6 @@ def check_index_path(repo_path, index_path=None):
     if not index_path:
         index_path = look_for_existing_index(repo_path)
     if not index_path:
-        click.echo("No existing index found.")
         return None
     return index_path
 

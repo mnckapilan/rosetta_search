@@ -37,6 +37,8 @@ def rosetta(ctx, json_mode, repo_path, index_path):
 def load(ctx, update):
     index = RosettaIndex(ctx.repo_path, ctx.index_path)
     last_updated = index.get_last_updated()
+    if last_updated is None:
+        last_updated = "never"
     if ctx.json_mode:
         json_echo({"status": "success", "last_update_time": f"{last_updated}"})
     else:
@@ -48,6 +50,8 @@ def load(ctx, update):
 def update(ctx):
     index = RosettaIndex(ctx.repo_path, ctx.index_path)
     last_updated = index.get_last_updated()
+    if last_updated is None:
+        last_updated = "never"
     click.echo(f"Most recent update was at {last_updated}")
     num_of_commits, last_updated = index.update_index()
     click.echo(f"{num_of_commits} new commits indexed successfully.")
@@ -69,7 +73,7 @@ def basic_search(ctx, query):
 @click.option('--query', type=click.STRING)
 @click.option('--top-n', type=click.INT)
 @pass_context
-def similarity_search(ctx, query, top_n):
+def search(ctx, query, top_n):
     index = RosettaIndex(ctx.repo_path, ctx.index_path)
 
     if top_n is None:
@@ -80,16 +84,21 @@ def similarity_search(ctx, query, top_n):
     if ctx.json_mode:
         json_echo({"status": "success", "results": results})
     else:
-        click.echo(results)
+        click.echo(list(results.keys()))
 
 
 @rosetta.command()
 @click.option('--overwrite', is_flag=True)
 @pass_context
 def create(ctx, overwrite):
-    index, num_commits, build_time = RosettaIndex.create_new_index(ctx.repo_path, ctx.index_path)
+    if not ctx.json_mode:
+        click.echo(f"Building index...")
+
+    index, num_commits, build_time, vocab_size = RosettaIndex.create_new_index(ctx.repo_path, ctx.index_path,
+                                                                               tqdm_disable=ctx.json_mode)
     if ctx.json_mode:
-        json_echo({"status": "success", "number_of_commits": num_commits, "build_time": build_time})
+        json_echo(
+            {"status": "success", "number_of_commits": num_commits, "build_time": build_time, "vocab_size": vocab_size})
 
 
 if __name__ == '__main__':

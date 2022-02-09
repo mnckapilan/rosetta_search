@@ -1,3 +1,4 @@
+import time
 import requests
 
 localhost = "http://127.0.0.1:8000"
@@ -11,8 +12,13 @@ def get_nltk_wup_similarity(a: str, b: str) -> float:
 
 def get_similarity(a: str, b: str):
     url = f"{localhost}/ft_similarity"
-    response = requests.get(url, params={'a': a, 'b': b})
-    return float(response.content.decode("utf-8"))
+    try:
+        response = requests.get(url, params={'a': a, 'b': b})
+        return float(response.content.decode("utf-8"))
+    except OSError:
+        time.sleep(1)
+        response = requests.get(url, params={'a': a, 'b': b})
+        return float(response.content.decode("utf-8"))
 
 
 if __name__ == '__main__':

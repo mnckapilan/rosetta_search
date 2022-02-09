@@ -13,8 +13,8 @@ class FileResult:
     def __eq__(self, other):
         return isinstance(other, FileResult) and self.filepath == other.filepath
 
-    def add_matched_token(self, matched_token, tf_idf):
-        self.matched_tokens.append(MatchedToken(matched_token, tf_idf))
+    def add_matched_token(self, matched_token, tf_idf, similarity):
+        self.matched_tokens.append(MatchedToken(matched_token, tf_idf, similarity))
 
     def add_query_token(self, query_token):
         self.query_tokens.add(query_token)

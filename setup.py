@@ -22,7 +22,10 @@ setup(
     install_requires=[
         "GitPython~=3.1.14",
         "nltk~=3.6.1",
-        "click~=7.1.2"
+        "click~=7.1.2",
+        "jsonpickle==2.0.0",
+        "requests==2.25.1"
+
     ],
     entry_points='''
     [console_scripts]

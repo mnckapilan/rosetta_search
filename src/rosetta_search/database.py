@@ -172,25 +172,34 @@ class Database:
 
     def get_last_indexed_rev(self):
         con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
         cur = con.cursor()
 
-        last_rev = cur.execute("SELECT end_rev FROM updates ORDER BY end_time LIMIT 1").fetchone()[0]
+        row = cur.execute("SELECT end_rev FROM updates ORDER BY end_time LIMIT 1").fetchone()
 
         con.commit()
         con.close()
+
+        if row is not None:
+            last_rev = row["end_rev"]
+        else:
+            last_rev = None
 
         return last_rev
 
     def get_last_updated(self):
         con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
         cur = con.cursor()
 
-        last_updated = cur.execute("SELECT end_time FROM updates ORDER BY end_time LIMIT 1").fetchone()[0]
+        row = cur.execute("SELECT end_time FROM updates ORDER BY end_time LIMIT 1").fetchone()
+        if row is not None:
+            last_updated = row["end_time"]
+        else:
+            last_update = None
 
         con.commit()
         con.close()
-
-        return last_updated
 
     def get_files_for_token(self, token: str) -> list[(str, float)]:
         con = sqlite3.connect(self.db_location)
@@ -198,7 +207,7 @@ class Database:
         cur = con.cursor()
 
         rows = cur.execute(
-            "SELECT f.filepath, tf.tf_idf_score "
+            "SELECT f.filepath, tf.file_id, tf.token_id "
             "FROM tokens "
             "JOIN tokens_files tf "
             "ON tokens.token_id = tf.token_id "
@@ -213,7 +222,8 @@ class Database:
 
         files: list[(str, float)] = []
         for row in rows:
-            files.append((row['filepath'], row['tf_idf_score']))
+            tf_idf_score = self.get_tf_idf_for_token_file(row['token_id'], row['file_id'])
+            files.append((row['filepath'], tf_idf_score))
         return files
 
     def get_all_commits(self):
@@ -241,6 +251,36 @@ class Database:
         con.close()
 
         return result
+
+    def get_tf_idf_for_token_file(self, token_id, file_id):
+        tf_idf_query = '''
+                 WITH tf(tf) as (SELECT COUNT(token_id) as tf
+                         from tokens_files
+                         WHERE token_id = :token_id
+                           and file_id = :file_id ),
+              df(df) as (
+                  SELECT COUNT(*) as document_freq
+                  from (SELECT 0 as df
+                        from tokens_files
+                        WHERE token_id = :token_id
+                        GROUP BY file_id)),
+              n(n) as (SELECT COUNT(file_id) as number
+                       from files)
+         SELECT ((SELECT tf from tf) * (log((SELECT n from n) / ((SELECT df from df) + 1)))) as tfidf
+
+                 '''
+
+        con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
+        con.create_function('log', 1, math.log2)
+        cur = con.cursor()
+
+        returned_rows = cur.execute(tf_idf_query,
+                                    {"token_id": token_id, "file_id": file_id}).fetchall()
+        tf_idf_score = [d['tfidf'] for d in returned_rows][0]
+        con.commit()
+        con.close()
+        return tf_idf_score
 
     def update_all_tf_idf(self):
 
@@ -276,3 +316,11 @@ class Database:
                         {"tf_idf": tf_idf_score, "token_file_id": row["token_file_id"]})
             con.commit()
         con.close()
+
+    def get_vocab_size(self):
+        con = sqlite3.connect(self.db_location)
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
+
+        row = cur.execute("SELECT COUNT(*) as vocab_size FROM main.tokens").fetchone()
+        return row["vocab_size"]
