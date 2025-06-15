@@ -4,6 +4,9 @@
 
 Instead of relying on exact keyword matches, Rosetta tries to understand your intent through commit messages, leveraging NLP techniques to connect concepts to code.
 
+Rosetta Search was developed as part of a final-year MEng project at Imperial College London, supervised by Dr. Robert Chatley.  
+
+
 ---
 
 ## 🚀 Why Rosetta Search?
@@ -74,25 +77,6 @@ Add `--show-all` to return more than the top 20 results.
 
 ---
 
-## 📈 Performance Notes
-
-- Lazy TF-IDF evaluation enables fast indexing for large repos
-- Supports local + public FastText models for embedding comparisons
-- Built for real-world usage: integrate with IDEs, CI/CD, or run standalone
-
----
-
-## 🧪 Research & Background
-
-Rosetta Search was developed as part of a final-year MEng project at Imperial College London, supervised by Dr. Robert Chatley.  
-
----
-
-## 📄 License
-
-MIT License
-
----
 
 ## ✨ Acknowledgements
 
